@@ -19,12 +19,9 @@ inv <- read_xlsx("data/Inver_Pristine.xlsx")
 
 
 # format date
-
-inv$date <- paste(inv$Date, "2016")
-
+# 
+# inv$date <- paste(inv$Date, "2016")
 # inv$date <- as.Date(inv$date, format = "%d %B %Y")
-head(inv)
-
 
 # Rename columns 
 
@@ -45,8 +42,7 @@ inv <- inv |>
 # Abundance by Islands
 
 abu_inv <- inv |> 
-  # filter(Quantity> 1) |>
-  group_by(Island, Site, Quadrat, Species) |> 
+  group_by(Island, Species) |> 
   summarise (Abundance = sum(Quantity)) |> 
   group_by(Island, Species) |>  
   # summarise(Abundance = mean(Abundance)) |> 
@@ -68,37 +64,19 @@ abu_inv <- inv |>
 
 abu_inv
 
-ggsave("figs/2016_inv_abundance_islands.png", width = 8.5, height = 4.5, dpi=1000)
-
-# stacked bar chart
-
-Abun <- inv |> 
-  filter(!is.na(Species)) |> 
-  # filter(Quantity> 1) |>
-  group_by(Island, Species) |> 
-  summarise(Abundance = sum(Quantity)) |> 
-  ggplot(aes(x = Island, y = Abundance, fill = Species)) +
-  geom_bar(stat = "identity", position = position_stack())+
-  theme(legend.text = element_text(face = "italic"))
-
-Abun 
-
-ggsave("figs/2016_inv_abundance_islands_PS.png", width = 8.5, height = 4.5, dpi=1000)
-
+ggsave("figs/2016_inv_abundance_island.png", width = 8.5, height = 4.5, dpi=1000)
 
 # Density by Island
 
 den_inv <- inv |> 
-  filter(Quantity> 1) |>
   group_by(Island, Site, Quadrat, Species) |> 
-  # summarise(Density = sum(Quantity)/ (10*100)) |> # (Area*100))  
-  summarise(Density = sum(Quantity/10)*100) |> 
+  summarise(Density = sum(Quantity/10)) |>  #10m2 o 6.25
   group_by(Island, Species) |> 
-  summarise(Density = mean(Density)) |>
+  # summarise(Density = mean(Density)) |>
   group_by(Island) |> 
   # top_n(10, Density) |> 
   ungroup() %>% 
-  mutate(Species= reorder_within(Species, Density, Island)) |> 
+  mutate(Species= reorder_within(Species, Density, Island)) |>
   ggplot(aes(x=Species, y = Density, fill=Island)) +
   geom_col()+
   coord_flip()+
@@ -106,13 +84,13 @@ den_inv <- inv |>
   scale_x_reordered() +
   # scale_color_material_d() +
   scale_fill_manual(values = brewer.pal(n = 4, name = "Set1"))+
-  # labs(y = "Density (organisms/ha)", x="", title= "2016") +
-  labs(y = "Density", x="", title= "Invertebrates per Island") +
+  labs(y = "Density (organisms/m2)", x="", title= "Invertebrates per Island") +
   theme(legend.position = "") +
   guides(colour = "none")+
   theme(axis.text.y = element_text(face= "italic"),
         plot.title = element_text(hjust=0.5)
   )
+
 den_inv
 
 ggsave("figs/2016_inv_density_islands.png", width = 8.5, height = 4.5, dpi=1000)
@@ -120,8 +98,8 @@ ggsave("figs/2016_inv_density_islands.png", width = 8.5, height = 4.5, dpi=1000)
 # Richness by Island
 Richness <- inv  |> 
   filter(!is.na(Species)) |> 
-  # filter(Quantity> 1) |>
-  group_by(Island, Species) |> 
+  filter(Quantity> 1) |>
+  group_by(Island) |> 
   summarise(Richness= length(unique(Species))) 
  
   ggplot(Richness, aes(x = Island, y = Richness)) +
@@ -133,30 +111,52 @@ Richness <- inv  |>
 ggsave("figs/2016_inv_richness_islands.png", width = 8.5, height = 4.5, dpi=1000)
 
 
-  ggplot(Richness, aes(x = Island, y = Richness, fill = Species)) +
-  geom_bar(stat = "identity") +
-  scale_fill_brewer(palette = "Set3") +
-  labs(x = "Island", y = "Richness", title = "Invertebrates per island")+
-  theme(legend.text = element_text(face = "italic"))
-
-
-ggsave("figs/2016_inv_richness_spp.png", width = 8.5, height = 4.5, dpi=1000)
-
 # Shannon-Wiener, H index 
 
-Shannon <- inv |> 
+Shannon <- inv |>
   filter(!is.na(Species)) |> 
   group_by(Island, Site, Depth, Species) |> 
   summarise(Quantity=sum(Quantity)) |> 
   group_by(Island, Site, Depth) |> 
   mutate(Diversity= vegan::diversity(Quantity, "shannon")) 
 
-  ggplot(Shannon, aes(x = Island, y = Diversity, fill=Species)) +
-  geom_bar(stat = "identity") +
-  labs(x = "Island", y = "Shannon (H)", title = "Invertebrates diversity")+
-  theme(legend.text = element_text(face = "italic"))
+ggplot(Shannon, aes(x = Island, y = Diversity, fill=Island)) +
+  geom_violin(trim = F,  alpha = .3) +
+  geom_boxplot(width  = 0.1) +
+  geom_jitter(width = 0.09, pch = 21,  alpha = .3) +
+  scale_color_manual(values = c("#0f2359", "#7AC5CD", "red", "darkred")) +
+  scale_fill_manual(values = c("#0f2359", "#7AC5CD", "red", "darkred")) +
+  # ylim(0, 1.5) +
+  labs(x = "", y = "Shannon (H)") +
+  theme_classic()+
+  theme(legend.position = "") +
+  guides(colour = "none")
 
-ggsave("Figs/Shannon_INV_Diversity.png", width = 8.5, height = 4.5, dpi=1000)
+ggplot(data =Shannon,
+       mapping = aes(x=Island,
+                     y= Diversity))+
+  geom_violin(trim=FALSE, aes(fill=Island))+
+  geom_jitter(height = 0, width = 0.0001) + 
+  geom_boxplot(width=0.1) + 
+  theme_classic()+
+  theme(legend.position = "",
+        plot.title = element_text(size=10, colour = "gray"))+
+  guides(colour = "none")+
+  ggtitle("Invertebrates diversity")+
+  labs(x = "", y = "Shannon (H)")
+
+ggplot(Shannon, aes(x = Island, y = Diversity, fill = Island)) +
+  geom_violin(trim = FALSE, scale = "width") +
+  geom_jitter(width = 0.2, size = 2, alpha = 0.5) +
+  labs(x = "Island", y = "Shannon (H)") +
+  theme_minimal()
+
+ggplot(Shannon, aes(x = Island, y = Diversity)) +
+  geom_bar(stat = "summary", fun = "mean", fill = "red") +
+  labs(x = "Island", y = "Shannon") +
+  theme_classic()
+
+ggsave("Figs/2016_inv_Shannon_Diversity.png", width = 8.5, height = 4.5, dpi=1000)
 
 
 # Simpson index 1-D
@@ -168,27 +168,43 @@ Simpson <- inv |>
   group_by(Island, Site, Depth) |> 
   mutate(Diversity= vegan::diversity(Quantity, "simpson"))
 
-ggplot(Simpson, aes(x = Island, y = Diversity, fill=Species)) +
-  geom_bar(stat = "identity") +
-  labs(x = "Island", y = "Simpson", title = "Invertebrates diversity")+
-  theme(legend.text = element_text(face = "italic"))
+ggplot(Simpson, aes(x = Island, y = Diversity)) +
+  geom_bar(stat = "summary", fun = "mean", fill = "red") +
+  labs(x = "Island", y = "Simpson") +
+  theme_classic()
+
+ggplot(Simpson, aes(x = Island, y = Diversity, fill = Island)) +
+  geom_boxplot() +
+  xlab("Island") + ylab("Simpson") +
+  ggtitle("Invertebrates diversity") +
+  theme_classic()
+
+ggplot(data =Simpson,
+       mapping = aes(x=Island,
+                     y= Diversity))+
+  geom_violin(trim=FALSE, aes(fill=Island))+
+  geom_jitter(height = 0, width = 0.0001) + 
+  geom_boxplot(width=0.1) + 
+  theme_classic()+
+  theme(legend.position = "",
+        plot.title = element_text(size=10, colour = "gray"))+
+  guides(colour = "none")+
+  ggtitle("Invertebrates diversity")+
+  labs(x = "", y = "Simpson")
+
+ggplot(Simpson, aes(x = Island, y = Diversity, fill=Island)) +
+  geom_violin(trim = F,  alpha = .3) +
+  geom_boxplot(width  = 0.1) +
+  geom_jitter(width = 0.09, pch = 21,  alpha = .3) +
+  scale_color_manual(values = c("#0f2359", "#7AC5CD", "red", "darkred")) +
+  scale_fill_manual(values = c("#0f2359", "#7AC5CD", "red", "darkred")) +
+  # ylim(0, 1.5) +
+  labs(x = "", y = "Simpson") +
+  theme_classic()+
+  theme(legend.position = "") +
+  guides(colour = "none")
 
 ggsave("Figs/Simpson_INV_Diversity.png", width = 8.5, height = 4.5, dpi=1000)
-
-
-# Inverse Simpson, 1/D
-
-invD2 <- inv |>
-  filter(!is.na(Species)) |>
-  group_by(Island, Site, Depth, Species) |>
-  summarise(Quantity=sum(Quantity)) |>
-  group_by(Island, Site, Depth) |>
-  mutate(Diversity= vegan::diversity(Quantity, "invsimpson"))
-
-ggplot(invD2, aes(x = Island, y = Diversity, fill=Species)) +
-  geom_bar(stat = "identity") +
-  labs(x = "Island", y = "Inverse Simpson", title = "Invertebrates diversity")+
-  theme(legend.text = element_text(face = "italic"))
 
 # Combine Simpson & shannon indexes
 
@@ -203,5 +219,5 @@ ggplot(diversity, aes(x = Island, y = Diversity, fill = Index)) +
        fill = "Index") +
   scale_fill_manual(values = c("#E69F00", "#56B4E9")) 
 
-ggsave("Figs/indexes_INV_Diversity.png", width = 8.5, height = 4.5, dpi=1000)
+ggsave("Figs/2016_inv_indixes_Diversity.png", width = 8.5, height = 4.5, dpi=1000)
 
