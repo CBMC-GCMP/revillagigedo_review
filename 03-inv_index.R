@@ -110,7 +110,7 @@ ggsave("figs/2016_inv_richness_islands.png", width = 8.5, height = 4.5, dpi=1000
 Shannon <- inv |>
   filter(!is.na(Species)) |> 
   group_by(Island, Depth, Species) |> 
-  summarise(Quantity=sum(Quantity)) |> 
+  summarise(Quantity=sum(Quantity, na.rm=T)) |> 
   filter(!Quantity==1) |> 
   group_by(Island, Depth) |> 
   mutate(Diversity= vegan::diversity(Quantity, "shannon"))
