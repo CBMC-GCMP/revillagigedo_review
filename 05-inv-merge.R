@@ -17,6 +17,11 @@ rev <- readRDS("data/LTEM_extract_Revillagigedo.RDS") # CBMC's ltem Revillagiged
 inv_conanp <- read_xlsx("data/Base de datos Arrecifal PNR.xlsx", sheet = "Invertebrados") # CONANP
 
 
+# Estandarización ---------------------------------------------------------------
+
+#  Agregar fecha, corregir nombres, establecer estaciones
+
+
 inv_ps <- inv_ps |> 
   separate(Date, into=c("Day", "Month"), sep=" ") |> 
   mutate(Month=case_when(Month=="march"~03,
@@ -88,6 +93,8 @@ inv_conanp <- inv_conanp |>
     TRUE ~ "Other")
   )
 
+# Agregar Género y Taxa2
+
 inv_ps <- inv_ps |> 
   mutate(Genus = sub("^(\\w+).*", "\\1", Species)) |> 
   mutate(Taxa2 = case_when(
@@ -118,6 +125,7 @@ pcu <- pcu |>
     Genus ==  "Spirobranchus"  ~ "Sedentaria" ,
     TRUE ~ "Other"
   ))
+
 pcu <- pcu |> 
   mutate(Phylum = case_when(
     Taxa2 == "Verongimorpha" | Taxa2 == "Calcinea"| Taxa2== "Ketarosa" ~ "Porifera",
@@ -125,7 +133,6 @@ pcu <- pcu |>
     Taxa2 ==  "Sedentaria"  ~ "Annelida" ,
     TRUE ~ "Other"
   ))
-
 
 inv_conanp <- inv_conanp |> 
   mutate(Genus = sub("^(\\w+).*", "\\1", Species)) |> 
@@ -152,6 +159,8 @@ inv_conanp <- inv_conanp |>
     TRUE ~ "Other"
   ))
 
+# Determinar profundidad superficial y profunda
+
 inv_conanp <- inv_conanp |> 
   mutate(Depth2 = case_when(
     Depth <  15 ~ "Shallow" ,
@@ -173,6 +182,8 @@ pcu <- pcu |>
     TRUE ~ "Other"
   ))
 
+
+# Agrupar por columnas en común y promediar abundancias
 
 inv_ps <- inv_ps |> 
   group_by(Year, Month, Day, Island, Reef, Depth2, Phylum, Taxa2, Genus, Species, Quantity, Season) |> 
@@ -199,6 +210,9 @@ inv_conanp <- inv_conanp |>
   summarise (Abundance = sum(Quantity, na.rm = T)) |> 
   group_by(Year, Island, Reef, Depth2, Taxa2, Genus, Species, Season) |> 
   summarise(Abundance = mean(Abundance))
+
+# Merge ----------------------
+# Juntar las cuatro bases de datos
 
 merged_inv <- bind_rows(inv_ps, ltem_inv, inv_conanp, pcu)
 
