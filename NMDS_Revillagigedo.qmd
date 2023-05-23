@@ -1,0 +1,100 @@
+---
+title: "NMDS" 
+author: "CBMC" 
+format: html 
+editor: visual 
+---
+
+## Non-Metric Multidimensional scaling (NMDS)
+
+NMDS does not use the absolute abundances of species in communities, but rather their *rank orders*.
+
+The NMDS procedure is iterative and takes place over several steps:
+
+1.  Define the original positions of communities in multidimensional space.
+
+2.  Specify the number of reduced dimensions (typically 2).
+
+3.  Construct an initial configuration of the samples in 2-dimensions.
+
+4.  Regress distances in this initial configuration against the observed (measured) distances.
+
+5.  Determine the stress, or the disagreement between 2-D configuration and predicted values from the regression. If the 2-D configuration perfectly preserves the original rank orders, then a plot of one against the other must be monotonically increasing. The extent to which the points on the 2-D configuration differ from this monotonically increasing line determines the degree of stress. This relationship is often visualized in what is called a Shepard plot.
+
+6.  If stress is high, reposition the points in 2 dimensions in the direction of decreasing stress, and repeat until stress is below some threshold.\*\*A good rule of thumb: stress \< 0.05 provides an excellent representation in reduced dimensions, \< 0.1 is great, \< 0.2 is good/ok, and stress \< 0.3 provides a poor representation.\*\*
+
+To begin, NMDS requires a distance matrix, or a matrix of dissimilarities. Raw Euclidean distances are not ideal for this purpose: they\'re sensitive to total abundances, so may treat sites with a similar number of species as more similar, even though the identities of the species are different.
+
+Use Bray-Curtis dissimilarity calculation. (see: http://www.econ.upf.edu/\~michael/stanford/maeb5.pdf )
+
+```{r include=FALSE, results='hide'}
+#SETUP 
+library(vegan) 
+library(tidyverse)
+```
+
+```{r results='hide', warning=FALSE, dev.args=FALSE, comment=FALSE}
+set.seed(666) 
+ltem_rev <- readRDS("data/LTEM_extract_Revillagigedo.RDS")   
+  
+community_matrix <- ltem_rev |>    
+  group_by(Year, Island,  Reef, Transect, Species) |>    
+  summarise(Quantity = sum(Quantity)) |>    
+  group_by(Island, Reef, Species) |>    
+  summarise(Quantity = round(mean(Quantity),1)) |>    
+  pivot_wider(names_from = "Species", values_from = "Quantity") |>    remove_rownames()|>    
+  column_to_rownames(var="Reef") #Nombramos a las comunidades como los arrecifes
+
+#Ausencias verdaderas  
+community_matrix[is.na(community_matrix)] <- 0 
+```
+
+```{r, results='hide'}
+#Retiramos la columna de Islas
+rev_NMDS <- metaMDS(community_matrix[,2:147], #Matriz de arrecife por especie
+                   k=2, #A estas dimensiones escalamos el NMDS (Reduced dimensions)
+                   trymax =1000) #Número de iteraciones que se van a realizar                                        (cambiar si es necesario)   
+```
+
+Si aparece "High stress" warning, aumentar el número de dimensiones (*i.e.* *`k=3`*)
+
+```{r} # sb_NMDS <- metaMDS(community_matrix,#Matriz de arrecife por especie #                    k=3, #A estas dimensiones escalamos el NMDS (Reduced dimensions) #                    trymax =1000) #Número de iteraciones que se van a realizar (cambiar si es necesario)}
+```
+
+#### Shepard plot
+
+Shows scatter around the regression between the interpoint distances in the final configuration (i.e., the distances between each pair of communities) against their original dissimilarities.
+
+```{r}
+stressplot(rev_NMDS)
+```
+
+Si ves más dispersión de los puntos respecto a la línea, entonces las disimilitudes originales no se preservan muy bien en el escalamiento para reducir dimensiones.
+
+#### NMDS plot
+
+Para mostrar las comunidades o sitios de la matriz (círculos) y las especies que los representan (cruces).
+
+```{r}
+plot(rev_NMDS)
+```
+
+Y hacemos agrupaciones:
+
+```{r}
+#Agrupamos por isla
+island <- community_matrix$Island
+
+
+
+ordiplot(rev_NMDS,type="n")
+orditorp(rev_NMDS,display="species",col="red",air=2, pch = "+")
+orditorp(rev_NMDS,display="sites",col=c(rep("firebrick",2),rep("darkgreen",1),
+                                        rep("blue",13), rep("orange",14 )),
+air=3,cex=0.3)
+ordihull(rev_NMDS,groups=island,draw="polygon",label=T, fill="white", col =c("firebrick", "darkgreen", "lightblue", "gold"), alpha = 0.25 )
+# ordilabel(rev_NMDS, labels=island, fill="white", border=NA)
+
+
+print(unique(island))
+```
