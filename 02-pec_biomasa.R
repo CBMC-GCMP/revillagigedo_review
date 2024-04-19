@@ -12,7 +12,6 @@ library(openxlsx)    # Librería para leer y escribir archivos de Excel.
 
 # Cargar datos ------------------------------------------------------------
 
-# Cargamos los datos del archivo RDS "promares_pnr_historic.RDS".
 datos <- readRDS("data/promares_pnr_historic.RDS") 
 
 
