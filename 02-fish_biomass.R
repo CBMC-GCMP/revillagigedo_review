@@ -12,7 +12,7 @@ library(openxlsx)    # Library for reading and writing Excel files.
 
 # Load data ------------------------------------------------------------
 
-data <- readRDS("data/promares_pnr_historic.RDS") 
+data <- readRDS("data/updates/promares_pnr_update.RDS") 
 
 
 # Fish biomass --------------------------------------------------------
