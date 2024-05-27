@@ -3,6 +3,8 @@
 
 library(aws.s3)
 library(tidyverse)
+library(readxl)
+library(writexl)
 
 source("R/00-retrieve_db_from_s3.R")
 
