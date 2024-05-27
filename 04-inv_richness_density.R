@@ -72,7 +72,8 @@ plot_richness
 
 # Filter data for the year 2023
 density <- inverts %>%
-  filter(Year == 2023, Label == "INV", Region == "Revillagigedo") %>%
+  # filter(Year == 2023) %>% # Filter a specific year
+  filter(Label == "INV", Region == "Revillagigedo") %>%
   group_by(Island, Reef, Transect, Depth2, Ulate, Species) %>%
   # Calculate density by dividing quantity by area
   summarise(Density = Quantity / Area) %>%
